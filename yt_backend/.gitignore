@@ -1,0 +1,16 @@
+# Virtual environment
+venv/
+
+# Downloaded MP3 files
+downloads/
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment/config files (sensitive)
+.env
+
+# OS junk
+.DS_Store
