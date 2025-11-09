@@ -88,4 +88,6 @@ def stream_file(file_id: str, background_tasks: BackgroundTasks):
 
     return FileResponse(mp3_path, media_type="audio/mpeg")
 
-
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)
