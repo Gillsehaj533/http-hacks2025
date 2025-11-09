@@ -5,10 +5,12 @@ import android.Manifest
 import android.content.ContentUris
 import android.content.Context
 import android.content.pm.PackageManager
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.MediaStore
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,6 +44,7 @@ import androidx.compose.material3.TabRowDefaults
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -145,6 +149,9 @@ fun MusicListScreen() {
             isGranted -> hasPermission = isGranted
     }
 
+    // 🎵 Keep MediaPlayer as a rememberable state
+    val mediaPlayer = remember { mutableStateOf<MediaPlayer?>(null) }
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
@@ -160,13 +167,35 @@ fun MusicListScreen() {
 
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(audioFiles) { audioFile ->
-                    ShowAudioItem(audioFile)
+                    ShowAudioItem(
+                        audioDetails = audioFile,
+                        onClick = {
+                            try {
+                                // 🔄 Release any currently playing media
+                                mediaPlayer.value?.release()
+
+                                // ▶️ Create and start new player
+                                val player = MediaPlayer.create(context, audioFile.uri)
+                                mediaPlayer.value = player
+                                player.start()
+                            } catch (e: Exception) {
+                                Log.e("AUDIO_PLAYBACK", "Error playing file: ${e.message}", e)
+                            }
+                        }
+                    )
                 }
             }
         } else {
             Button(onClick = { launcher.launch(permission) }) {
                 Text("Grant Permission to Access Music")
             }
+        }
+    }
+
+    // 🧹 Clean up when leaving the screen
+    DisposableEffect(Unit) {
+        onDispose {
+            mediaPlayer.value?.release()
         }
     }
 }
@@ -223,21 +252,21 @@ fun loadAudioFiles(context: Context): List<AudioDetails> {
 }
 
 @Composable
-fun ShowAudioItem(audioDetails: AudioDetails) {
-    Row (
+fun ShowAudioItem(audioDetails: AudioDetails, onClick: () -> Unit) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp)
+            .clickable(onClick = onClick) // 👈 Makes it tappable
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Image(
             painter = painterResource(id = R.drawable.music_note),
             contentDescription = "Music Note",
-            modifier = Modifier
+            modifier = Modifier.size(40.dp)
         )
-        Column (
-            modifier = Modifier
-                .padding(16.dp)
-        ) {
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
             Text(audioDetails.title, style = MaterialTheme.typography.bodyLarge)
             Text(audioDetails.artist, style = MaterialTheme.typography.bodyMedium)
         }
