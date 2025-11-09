@@ -16,3 +16,7 @@ __pycache__/
 .DS_Store
 
 .dockerignore
+
+cookies.txt
+minimalcookies.txt
+minimal_cookies_clean.txt
