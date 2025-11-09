@@ -7,6 +7,7 @@ from yt_dlp import YoutubeDL
 import os
 import uuid
 import time
+import uvicorn
 
 app = FastAPI()
 
