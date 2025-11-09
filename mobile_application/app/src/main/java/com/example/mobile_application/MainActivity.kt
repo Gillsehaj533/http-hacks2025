@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -30,7 +31,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.TabRowDefaults
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -54,10 +62,66 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MusicListScreen()
+            Mobile_applicationTheme {
+                Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+                    MusicAppTabs()
+                }
+            }
         }
     }
 }
+
+// ------------------------------------
+// 🎵 TABS SHELL (NEW COMPOSABLE)
+// ------------------------------------
+@Composable
+fun MusicAppTabs() {
+    var selectedTabIndex by remember { mutableStateOf(0) }
+    val tabs = listOf("My Music", "Converter")
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Spacer(modifier = Modifier.height(30.dp))
+        // Top tab row
+        TabRow(
+            selectedTabIndex = selectedTabIndex,
+            containerColor = MaterialTheme.colorScheme.surface,
+            contentColor = MaterialTheme.colorScheme.primary,
+            indicator = { tabPositions ->
+                TabRowDefaults.SecondaryIndicator(
+                    Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTabIndex == index,
+                    onClick = { selectedTabIndex = index },
+                    text = {
+                        Text(
+                            text = title,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = if (selectedTabIndex == index)
+                                MaterialTheme.colorScheme.primary
+                            else
+                                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                    }
+                )
+            }
+        }
+
+        // Screen content based on selected tab
+        when (selectedTabIndex) {
+            0 -> MusicListScreen()
+            1 -> ConverterScreen()
+        }
+    }
+}
+
+// ------------------------------------
+// 🪄 ORIGINAL CODE BELOW UNCHANGED
+// ------------------------------------
 
 @Composable
 fun MusicListScreen() {
@@ -174,8 +238,8 @@ fun ShowAudioItem(audioDetails: AudioDetails) {
             modifier = Modifier
                 .padding(16.dp)
         ) {
-            Text(audioDetails.title)
-            Text(audioDetails.artist)
+            Text(audioDetails.title, style = MaterialTheme.typography.bodyLarge)
+            Text(audioDetails.artist, style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
