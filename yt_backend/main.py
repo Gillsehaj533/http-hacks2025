@@ -1,17 +1,25 @@
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from yt_dlp import YoutubeDL
 import os
 import uuid
-
-# create downloads folder if missing
-os.makedirs("downloads", exist_ok=True)
+import time
 
 app = FastAPI()
 
-# serve downloads folder publicly
-app.mount("/downloads", StaticFiles(directory="downloads"), name="downloads")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+TEMP_DIR = "downloads"
+os.makedirs(TEMP_DIR, exist_ok=True)
 
 
 class DownloadRequest(BaseModel):
@@ -20,17 +28,17 @@ class DownloadRequest(BaseModel):
 
 @app.get("/")
 def home():
-    return {"message": "Backend is running"}
+    return {"status": "running", "message": "🎧 YouTube → MP3 API ready"}
 
 
 @app.post("/download")
-def download_audio(request: DownloadRequest, req: Request):  # <-- add req: Request
-    unique_id = str(uuid.uuid4())
-    output_path = f"downloads/{unique_id}.%(ext)s"
+def download_audio(request: DownloadRequest, req: Request):
+    temp_id = str(uuid.uuid4())
+    output_template = f"{TEMP_DIR}/{temp_id}.%(ext)s"
 
     ydl_opts = {
         "format": "bestaudio/best",
-        "outtmpl": output_path,
+        "outtmpl": output_template,
         "postprocessors": [
             {
                 "key": "FFmpegExtractAudio",
@@ -44,23 +52,39 @@ def download_audio(request: DownloadRequest, req: Request):  # <-- add req: Requ
         with YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(request.url, download=True)
 
-        title = info.get("title")
-        duration = info.get("duration")
-        thumbnail = info.get("thumbnail")
+        mp3_path = f"{TEMP_DIR}/{temp_id}.mp3"
+        title = info.get("title", "audio").replace("/", "-")
 
-        output_mp3 = f"{unique_id}.mp3"
-
-        #dynamically detect base URL (local OR Fly.io)
-        base_url = str(req.base_url).rstrip("/")
-        download_url = f"{base_url}/downloads/{output_mp3}"
+        if not os.path.exists(mp3_path):
+            raise HTTPException(status_code=500, detail="MP3 conversion failed.")
 
         return {
             "status": "success",
-            "download_url": download_url,
+            "download_url": f"{req.base_url}stream/{temp_id}",
             "title": title,
-            "duration": duration,
-            "thumbnail": thumbnail,
+            "duration": info.get("duration"),
+            "thumbnail": info.get("thumbnail"),
         }
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Download failed: {str(e)}")
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/stream/{file_id}")
+def stream_file(file_id: str, background_tasks: BackgroundTasks):
+    mp3_path = f"{TEMP_DIR}/{file_id}.mp3"
+
+    if not os.path.exists(mp3_path):
+        raise HTTPException(status_code=404, detail="File not found.")
+
+    # ✅ Delete AFTER serving (ensures Android finished downloading)
+    def remove_file(path):
+        time.sleep(5)  # small safety buffer
+        if os.path.exists(path):
+            os.remove(path)
+
+    background_tasks.add_task(remove_file, mp3_path)
+
+    return FileResponse(mp3_path, media_type="audio/mpeg")
+
+
