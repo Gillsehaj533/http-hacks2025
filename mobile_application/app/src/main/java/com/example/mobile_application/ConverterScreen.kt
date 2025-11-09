@@ -33,6 +33,15 @@ fun ConverterScreen() {
     var songTitle by remember { mutableStateOf("") }
     var downloadUrl by remember { mutableStateOf("") }
 
+    // Reset everything when leaving screen (Compose disposal)
+    DisposableEffect(Unit) {
+        onDispose {
+            youtubeUrl = ""
+            songTitle = ""
+            downloadUrl = ""
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,7 +56,8 @@ fun ConverterScreen() {
             value = youtubeUrl,
             onValueChange = { youtubeUrl = it },
             label = { Text("Paste YouTube link") },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !isLoading && songTitle.isEmpty()  // disable input while converting
         )
 
         Spacer(modifier = Modifier.height(14.dp))
@@ -55,6 +65,8 @@ fun ConverterScreen() {
         Button(
             onClick = {
                 isLoading = true
+                songTitle = ""
+                downloadUrl = ""
 
                 RetrofitClient.api.downloadAudio(DownloadRequest(youtubeUrl))
                     .enqueue(object : Callback<DownloadResponse> {
@@ -65,32 +77,28 @@ fun ConverterScreen() {
                             isLoading = false
 
                             if (!response.isSuccessful) {
-                                Log.e(
-                                    "RETROFIT_DEBUG",
-                                    "❌ HTTP ERROR: ${response.code()} ${response.message()}"
-                                )
-                                Log.e("RETROFIT_DEBUG", "❌ BODY: ${response.errorBody()?.string()}")
+                                Log.e("RETROFIT_DEBUG", "❌ HTTP ERROR: ${response.code()}")
                                 return
                             }
 
                             val data = response.body()
-                            Log.d("RETROFIT_DEBUG", "✅ RESPONSE: $data")
-
                             downloadUrl = data?.download_url ?: ""
                             songTitle = data?.title ?: ""
-                            Log.d("DOWNLOAD_URL", "URL → $downloadUrl")
+
+                            // clears input once Download button appears
+                            youtubeUrl = ""
                         }
 
                         override fun onFailure(call: Call<DownloadResponse>, t: Throwable) {
                             isLoading = false
                             Log.e("RETROFIT_DEBUG", "❌ FAILURE: ${t.message}", t)
                         }
-
                     })
             },
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
+            enabled = youtubeUrl.isNotEmpty() && !isLoading && songTitle.isEmpty() // disable convert properly
         ) {
-            Text("Convert")
+            Text(if (isLoading) "Converting..." else "Convert")
         }
 
         if (isLoading) {
@@ -113,7 +121,6 @@ fun ConverterScreen() {
                         .setAllowedOverMetered(true)
                         .setAllowedOverRoaming(true)
 
-// ✅ Save into public Music folder (visible in Files app / Music apps)
                     request.setDestinationInExternalPublicDir(
                         Environment.DIRECTORY_MUSIC,
                         "$songTitle.mp3"
@@ -121,6 +128,10 @@ fun ConverterScreen() {
 
                     val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                     dm.enqueue(request)
+
+                    // ✅ After download is clicked, clear screen
+                    songTitle = ""
+                    downloadUrl = ""
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
