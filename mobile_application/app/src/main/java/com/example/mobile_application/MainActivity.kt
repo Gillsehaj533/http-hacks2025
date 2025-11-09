@@ -2,6 +2,7 @@ package com.example.mobile_application
 
 
 import android.Manifest
+import android.content.ContentUris
 import android.content.Context
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -13,6 +14,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -31,7 +33,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -81,7 +86,19 @@ fun MusicListScreen() {
         contentAlignment = Alignment.Center
     ) {
         if (hasPermission) {
-            Text("Permission granted! 🎶")
+
+            val audioFiles = remember { mutableStateListOf<AudioDetails>() }
+
+            LaunchedEffect(Unit) {
+                audioFiles.clear()
+                audioFiles.addAll(loadAudioFiles(context))
+            }
+
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
+                items(audioFiles) { audioFile ->
+                    ShowAudioItem(audioFile)
+                }
+            }
         } else {
             Button(onClick = { launcher.launch(permission) }) {
                 Text("Grant Permission to Access Music")
@@ -128,8 +145,37 @@ fun loadAudioFiles(context: Context): List<AudioDetails> {
         val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
 
         while (cursor.moveToNext()) {
-            val id =
+            val id = cursor.getLong(idColumn)
+            val title = cursor.getString(titleColumn) ?: "Unknown Title"
+            val artist = cursor.getString(artistColumn) ?: "Unknown Artist"
+            val uri = ContentUris.withAppendedId(
+                MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, id
+            )
+            songs.add(AudioDetails(id, title, artist, uri))
         }
     }
 
+    return songs
+}
+
+@Composable
+fun ShowAudioItem(audioDetails: AudioDetails) {
+    Row (
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp)
+    ) {
+        Image(
+            painter = painterResource(id = R.drawable.music_note),
+            contentDescription = "Music Note",
+            modifier = Modifier
+        )
+        Column (
+            modifier = Modifier
+                .padding(16.dp)
+        ) {
+            Text(audioDetails.title)
+            Text(audioDetails.artist)
+        }
+    }
 }
