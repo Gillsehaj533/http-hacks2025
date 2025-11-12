@@ -1,13 +1,13 @@
 # Convertify — Video to MP3 Converter (Android + FastAPI)
 
-Convertify is a mobile application that converts YouTube links into MP3 audio files. The Android app communicates with a Python FastAPI backend microservice that performs the audio extraction and MP3 conversion using yt-dlp and FFmpeg. Once converted, the backend streams the MP3 file back to the Android app, which then saves it directly into the device's Music directory using Android's DownloadManager.
+Convertify is a mobile application that converts public video links from any platform into MP3 audio files. The Android app communicates with a Python FastAPI backend microservice that performs the audio extraction and MP3 conversion using yt-dlp and FFmpeg. Once converted, the backend streams the MP3 file back to the Android app, which then saves it directly into the device's Music directory using Android's DownloadManager.
 
 ## Inspiration
 Many MP3 converter websites are filled with advertisements, pop-ups, and malware. The goal of this project was to develop a clean, simple, and safe way to convert and download audio without dealing with malicious websites or unnecessary clutter.
 
 ## What it does
 The app allows the user to:
-- Paste a YouTube link
+- Paste a public video link from any platform.
 - Convert the link into an MP3 file via the backend service
 - Save the converted MP3 into the Music folder on the device
 - Play MP3 files that already exist on their Android device
@@ -19,14 +19,14 @@ The app allows the user to:
 - Android DownloadManager was used to store downloaded MP3 files directly into the Music directory
 
 ### Backend (FastAPI)
-- A Python microservice (`main.py`) receives the YouTube URL
+- A Python microservice (`main.py`) receives the video URL
 - yt-dlp extracts the best available audio stream
 - FFmpeg converts the audio stream into MP3 format
 - The backend streams the converted MP3 file back to the Android client
 - Temporary MP3 files are automatically deleted after download
 
 ## Challenges we ran into
-The backend worked perfectly when running locally, but once deployed to Fly.io, file handling became problematic. YouTube required cookie authentication for certain videos, and after cookie support was added, the backend stopped streaming files correctly. The MP3 file was being stored inside one container path while the server was trying to stream from a different directory. Debugging path mismatches, container storage behavior, and cookie authentication was the most challenging part of the project.
+The backend worked perfectly when running locally, but once deployed to Fly.io, file handling became problematic. Some platforms required cookie authentication for certain videos, and after cookie support was added, the backend stopped streaming files correctly. The MP3 file was being stored inside one container path while the server was trying to stream from a different directory. Debugging path mismatches, container storage behavior, and cookie authentication was the most challenging part of the project.
 
 ## Accomplishments that we’re proud of
 - Built a fully functioning MVP that connects Android and FastAPI reliably
