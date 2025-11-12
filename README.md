@@ -1,4 +1,4 @@
-# Convertify — YouTube to MP3 Converter (Android + FastAPI)
+# Convertify — Video to MP3 Converter (Android + FastAPI)
 
 Convertify is a mobile application that converts YouTube links into MP3 audio files. The Android app communicates with a Python FastAPI backend microservice that performs the audio extraction and MP3 conversion using yt-dlp and FFmpeg. Once converted, the backend streams the MP3 file back to the Android app, which then saves it directly into the device's Music directory using Android's DownloadManager.
 
